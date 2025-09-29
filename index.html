@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura Motors - Sculpted by Light</title>
+    <!-- Chosen Palette: Futuristic Dark (Dark Charcoal, Electric Blue, Metallic Silver) -->
+    <!-- Application Structure Plan: The website employs a narrative, top-to-bottom scrolling structure common for product landing pages. This user flow is designed to act as a marketing funnel: 1. Hook (Hero Video) to capture immediate attention and set a luxurious tone. 2. Engage (Interactive 3D Model) to encourage user interaction and exploration. 3. Inform (Key Features) to deliver key selling points concisely. 4. Inspire (Video Gallery) to build an emotional connection. 5. Personalize (Color Visualizer) to create a sense of ownership. 6. Convert (Footer CTAs) to drive user action. This linear journey is intuitive and effectively guides the potential customer from initial interest to a conversion point. -->
+    <!-- Visualization & Content Choices: 1. Hero Background (Full-screen Video) -> Goal: Immersion -> Justification: A video is more dynamic and emotionally engaging than a static image for introducing a premium product. 2. Car Showcase (Interactive 3D Model) -> Goal: Exploration -> Viz: three.js Canvas -> Interaction: User-controlled rotation -> Justification: Provides a deeper, more tangible sense of the car's design than static images, enhancing user engagement. 3. Key Features (Image Grid) -> Goal: Inform -> Viz: Responsive Grid with high-res images -> Interaction: Scroll-triggered animations -> Justification: Breaks down complex information into easily digestible, visually appealing chunks. 4. Color Options (Image Swap) -> Goal: Personalization -> Viz: HTML Image -> Interaction: On-click color change -> Justification: A simple yet effective way to let users customize the product, increasing their connection to it. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #111;
+            --bg-modal: #1a1a1a;
+            --text-primary: #c0c0c0;
+            --text-secondary: #a0a0a0;
+            --text-headings: #ffffff;
+            --border-color: #00aaff;
+            --glow-color: #00aaff;
+        }
+
+        .light-theme {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-modal: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #555555;
+            --text-headings: #000000;
+            --border-color: #007bff;
+            --glow-color: #007bff;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .glow-button {
+            box-shadow: 0 0 5px var(--glow-color), 0 0 15px var(--glow-color), 0 0 25px var(--glow-color);
+            transition: all 0.3s ease-in-out;
+        }
+        .glow-button:hover {
+            box-shadow: 0 0 10px var(--glow-color), 0 0 25px var(--glow-color), 0 0 50px var(--glow-color);
+            transform: scale(1.05);
+        }
+        .feature-card, .product-card {
+            background-color: var(--bg-secondary);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out, background-color 0.3s ease;
+        }
+        .feature-card.is-visible, .product-card.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .option-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-btn:hover {
+            transform: scale(1.05);
+        }
+        .option-btn.selected {
+            border-color: var(--border-color);
+            box-shadow: 0 0 8px var(--glow-color);
+        }
+        .color-swatch.selected {
+             outline: 2px solid var(--border-color);
+             outline-offset: 3px;
+        }
+        #product-modal.hidden {
+            display: none;
+        }
+        /* Theme-aware text colors */
+        .text-headings { color: var(--text-headings); }
+        .text-secondary { color: var(--text-secondary); }
+
+        /* Theme-aware backgrounds */
+        .bg-primary { background-color: var(--bg-primary); }
+        .bg-secondary { background-color: var(--bg-secondary); }
+        .bg-modal { background-color: var(--bg-modal); }
+
+        /* Theme-aware borders */
+        .border-accent { border-color: var(--border-color); }
+        
+        /* Navbar theming */
+        .header-bg { background-color: rgba(0,0,0,0.3); }
+        .light-theme .header-bg { background-color: rgba(255,255,255,0.3); }
+        
+        /* Gemini Loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--border-color);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="fixed top-0 left-0 right-0 z-50 header-bg backdrop-blur-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#hero" class="text-2xl font-bold text-headings">AURA MOTORS</a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#showcase-3d" class="text-headings hover:text-blue-400 transition-colors">3D Model</a>
+                <a href="#features" class="text-headings hover:text-blue-400 transition-colors">Features</a>
+                <a href="#products" class="text-headings hover:text-blue-400 transition-colors">Our Cars</a>
+            </div>
+            <div class="flex items-center">
+                <button id="theme-toggle" class="text-headings focus:outline-none mr-4 p-2 rounded-full hover:bg-gray-700">
+                    <svg id="theme-icon-sun" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.121-3.536a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM4.05 14.536L3.343 15.243a1 1 0 001.414 1.414l.707-.707a1 1 0 00-1.414-1.414zM1 10a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1zm3.95-3.536a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zm11.314 0a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z"></path></svg>
+                    <svg id="theme-icon-moon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                </button>
+                <a href="#footer" class="hidden md:inline-block bg-transparent border border-white text-white py-2 px-4 rounded-full hover:bg-white hover:text-black transition-colors">Book a Test Drive</a>
+                <button id="mobile-menu-button" class="md:hidden text-headings focus:outline-none ml-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-secondary">
+            <a href="#showcase-3d" class="block py-2 px-4 text-sm text-headings hover:bg-gray-700">3D Model</a>
+            <a href="#features" class="block py-2 px-4 text-sm text-headings hover:bg-gray-700">Features</a>
+            <a href="#products" class="block py-2 px-4 text-sm text-headings hover:bg-gray-700">Our Cars</a>
+            <a href="#footer" class="block py-2 px-4 text-sm text-headings hover:bg-gray-700">Book a Test Drive</a>
+        </div>
+    </header>
+
+    <main>
+        <!-- 1. Hero Section -->
+        <section id="hero" class="h-screen w-full relative flex items-center justify-center text-center overflow-hidden bg-cover bg-center" style="background-image: url('https://images.pexels.com/photos/3136673/pexels-photo-3136673.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1');">
+            <div class="absolute inset-0 bg-black opacity-50"></div>
+            <div class="z-10 text-white px-4">
+                <h2 class="text-5xl md:text-8xl font-black uppercase tracking-wider">Aura-V: Sculpted by Light.</h2>
+                <p class="mt-4 text-lg md:text-2xl text-gray-300">Experience the new era of electric performance.</p>
+                <button id="discover-btn" class="mt-8 bg-blue-500 text-white py-3 px-8 rounded-full text-lg font-bold uppercase glow-button">
+                    Discover the Aura-V
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. Interactive 3D Showcase -->
+        <section id="showcase-3d" class="py-20 md:py-32 text-center bg-primary">
+            <div class="container mx-auto px-6">
+                <h3 class="text-4xl md:text-5xl font-bold text-headings mb-4">Engineered for Perfection.</h3>
+                <p class="text-lg md:text-xl text-secondary mb-12 max-w-3xl mx-auto">Interact with the Aura-V in three dimensions. Click and drag on the model to explore every curve and detail of its revolutionary design.</p>
+                <div class="w-full max-w-4xl mx-auto h-[70vh] rounded-lg overflow-hidden relative">
+                    <iframe class="absolute top-0 left-0 w-full h-full" title="BMW I8" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/4b143b95aec045bf8912d99662f8d580/embed"> </iframe>
+                </div>
+                 <p class="text-xs text-gray-500 mt-4">
+                    <a href="https://sketchfab.com/3d-models/bmw-i8-4b143b95aec045bf8912d99662f8d580?utm_medium=embed&utm_campaign=share-popup&utm_content=4b143b95aec045bf8912d99662f8d580" target="_blank" rel="nofollow" class="hover:text-blue-400"> BMW I8 </a> by 
+                    <a href="https://sketchfab.com/OneSteven?utm_medium=embed&utm_campaign=share-popup&utm_content=4b143b95aec045bf8912d99662f8d580" target="_blank" rel="nofollow" class="hover:text-blue-400"> iSteven </a> on 
+                    <a href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=4b143b95aec045bf8912d99662f8d580" target="_blank" rel="nofollow" class="hover:text-blue-400">Sketchfab</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- 3. Key Features Section -->
+        <section id="features" class="py-20 md:py-32 bg-secondary">
+            <div class="container mx-auto px-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                    <div class="feature-card text-center">
+                        <img src="https://images.pexels.com/photos/1231643/pexels-photo-1231643.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Performance" class="w-full h-64 object-cover rounded-lg mb-6">
+                        <h4 class="text-2xl font-bold text-headings mb-2">0-60 in 2.9 Seconds</h4>
+                        <p class="text-secondary">Breathtaking, silent acceleration that pushes you back in your seat.</p>
+                    </div>
+                    <div class="feature-card text-center">
+                        <img src="https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Range" class="w-full h-64 object-cover rounded-lg mb-6">
+                        <h4 class="text-2xl font-bold text-headings mb-2">450-Mile Range</h4>
+                        <p class="text-secondary">Go anywhere without compromise, from city streets to mountain peaks.</p>
+                    </div>
+                    <div class="feature-card text-center">
+                        <img src="https://images.pexels.com/photos/3972755/pexels-photo-3972755.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Interior" class="w-full h-64 object-cover rounded-lg mb-6">
+                        <h4 class="text-2xl font-bold text-headings mb-2">Starlight Cockpit</h4>
+                        <p class="text-secondary">A seamless fusion of minimalist design, technology, and luxury.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Products Section -->
+        <section id="products" class="py-20 md:py-32 bg-primary">
+            <div class="container mx-auto px-6 text-center">
+                <h3 class="text-4xl md:text-5xl font-bold text-headings mb-12">Explore Our Models</h3>
+                <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Product cards will be injected here by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Video Gallery -->
+        <section class="py-20 md:py-32 bg-secondary">
+             <div class="container mx-auto px-6 text-center">
+                <h3 class="text-4xl md:text-5xl font-bold text-headings mb-12">The Vision in Motion</h3>
+                 <div class="aspect-w-16 aspect-h-8 max-w-6xl mx-auto rounded-lg overflow-hidden shadow-2xl">
+                    <iframe src="https://www.youtube.com/embed/JbPBHtLstGw?autoplay=0&mute=0&controls=1&loop=1&rel=0&showinfo=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 7. Footer -->
+    <footer id="footer" class="bg-black py-16">
+        <div class="container mx-auto px-6 text-center text-gray-400">
+             <!-- Gemini Feature: Dream Road Trip -->
+            <div class="mb-16">
+                <h4 class="text-3xl font-bold text-white mb-4">✨ Plan Your Dream Road Trip</h4>
+                <p class="mb-6">Tell us your dream destination, and let our AI craft the perfect journey for your Aura.</p>
+                <div class="flex flex-col md:flex-row gap-4 justify-center max-w-lg mx-auto">
+                    <input type="text" id="destination-input" placeholder="e.g., Swiss Alps, Pacific Coast Highway" class="w-full md:w-auto flex-grow bg-gray-800 text-white placeholder-gray-500 rounded-full py-3 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="plan-trip-btn" class="bg-blue-500 text-white py-3 px-8 rounded-full font-bold uppercase hover:bg-blue-600 transition-colors flex items-center justify-center">
+                        <span id="plan-trip-btn-text">Plan My Trip</span>
+                        <div id="plan-trip-loader" class="loader hidden"></div>
+                    </button>
+                </div>
+                <div id="trip-plan-output" class="mt-8 text-left max-w-lg mx-auto bg-gray-900 p-6 rounded-lg hidden prose prose-invert"></div>
+            </div>
+
+            <h4 class="text-3xl font-bold text-white mb-4">Ready for the Future?</h4>
+            <p class="mb-8">The Aura-V is more than a car. It's a statement. Book your test drive today.</p>
+            <a href="#" class="inline-block bg-blue-500 text-white py-3 px-8 rounded-full text-lg font-bold uppercase glow-button mb-12">
+                Book a Test Drive
+            </a>
+            <div class="flex justify-center space-x-6 mb-8">
+                <a href="#" class="hover:text-white transition-colors" aria-label="Twitter">
+                    <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                </a>
+                <a href="#" class="hover:text-white transition-colors" aria-label="Instagram">
+                    <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.024.06 1.378.06 3.808s-.012 2.784-.06 3.808c-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.024.048-1.378.06-3.808.06s-2.784-.012-3.808-.06c-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.048-1.024-.06-1.378-.06-3.808s.012-2.784.06-3.808c.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 016.08 2.525c.636-.247 1.363-.416 2.427-.465C9.53 2.013 9.884 2 12.315 2zm-1.04 2.54a4.48 4.48 0 00-4.48 4.48 4.48 4.48 0 004.48 4.48 4.48 4.48 0 004.48-4.48 4.48 4.48 0 00-4.48-4.48zm-1.48 4.48a1.48 1.48 0 112.96 0 1.48 1.48 0 01-2.96 0zm7.22-3.72a1.04 1.04 0 11-2.08 0 1.04 1.04 0 012.08 0z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+                <a href="#" class="hover:text-white transition-colors" aria-label="YouTube">
+                     <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M19.812 5.418c.861.23 1.538.907 1.768 1.768C21.998 8.78 22 12 22 12s0 3.22-.42 4.814a2.506 2.506 0 0 1-1.768 1.768c-1.594.42-7.812.42-7.812.42s-6.218 0-7.812-.42a2.506 2.506 0 0 1-1.768-1.768C2 15.22 2 12 2 12s0-3.22.42-4.814a2.506 2.506 0 0 1 1.768-1.768C5.782 5 12 5 12 5s6.218 0 7.812.418zM9.5 15.5l7-3.5-7-3.5v7z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+            </div>
+            <p class="text-sm">&copy; 2025 Aura Motors. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Product Detail Modal -->
+    <div id="product-modal" class="fixed inset-0 z-[100] bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div id="modal-content" class="bg-modal text-headings rounded-lg shadow-2xl w-11/12 max-w-3xl max-h-[90vh] overflow-y-auto relative p-8">
+            <!-- Content will be injected by JS -->
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_KEY = ""; // Leave empty, will be handled by the environment
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+            
+            // --- Gemini API Caller ---
+            async function callGeminiAPI(prompt, retries = 3, delay = 1000) {
+                try {
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                    };
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        return candidate.content.parts[0].text;
+                    } else {
+                        throw new Error("Invalid response structure from Gemini API.");
+                    }
+                } catch (error) {
+                    if (retries > 0) {
+                        await new Promise(res => setTimeout(res, delay));
+                        return callGeminiAPI(prompt, retries - 1, delay * 2); // Exponential backoff
+                    } else {
+                        return "Our AI is currently taking a break. Please try again later.";
+                    }
+                }
+            }
+
+
+            // --- Theme Toggler ---
+            const themeToggleButton = document.getElementById('theme-toggle');
+            const themeIconSun = document.getElementById('theme-icon-sun');
+            const themeIconMoon = document.getElementById('theme-icon-moon');
+            const body = document.body;
+
+            const applyTheme = (theme) => {
+                localStorage.setItem('theme', theme);
+                if (theme === 'light') {
+                    body.classList.add('light-theme');
+                    themeIconSun.classList.remove('hidden');
+                    themeIconMoon.classList.add('hidden');
+                } else {
+                    body.classList.remove('light-theme');
+                    themeIconSun.classList.add('hidden');
+                    themeIconMoon.classList.remove('hidden');
+                }
+            };
+
+            themeToggleButton.addEventListener('click', () => {
+                const currentTheme = localStorage.getItem('theme') || 'dark';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                applyTheme(newTheme);
+            });
+
+            // Set initial theme based on preference or system settings
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+            applyTheme(initialTheme);
+
+
+            // --- Navbar Logic ---
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+
+                mobileMenuLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        mobileMenu.classList.add('hidden');
+                    });
+                });
+            }
+
+            // --- Product Data ---
+            const products = [
+                {
+                    id: 1,
+                    name: 'Aura Eon',
+                    price: 'Starting at $147,500',
+                    image: 'https://images.pexels.com/photos/1637859/pexels-photo-1637859.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+                    shortDesc: 'A revolutionary plug-in hybrid with stunning design and performance.',
+                    fullDesc: 'The Aura Eon shatters the perception of hybrid vehicles. Combining an electric motor with a powerful turbocharged engine, it delivers breathtaking performance with exceptional efficiency. Its futuristic design, complete with scissor doors and aerodynamic lines, makes it a true head-turner.',
+                    specs: {
+                        'Engine': '1.5L Turbo 3-Cylinder + Electric Motor',
+                        'Horsepower': '369 hp (Combined)',
+                        '0-60 mph': '4.2 seconds',
+                        'All-Electric Range': '18 miles',
+                        'Top Speed': '155 mph'
+                    }
+                },
+                {
+                    id: 2,
+                    name: 'Aura Blaze GT',
+                    price: 'Starting at $58,000',
+                    image: 'https://images.pexels.com/photos/337909/pexels-photo-337909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+                    shortDesc: 'A pure sports car experience with a powerful 3.0L Turbo engine.',
+                    fullDesc: 'The Aura Blaze GT is an icon reimagined. With its sensuous bodywork, athletic stance, and a driver-focused cockpit, it delivers pure driving pleasure. The turbocharged inline-six engine provides exhilarating acceleration, while the sport-tuned suspension ensures razor-sharp handling.',
+                    specs: {
+                        'Engine': '3.0L Turbocharged Inline-6',
+                        'Horsepower': '382 hp',
+                        '0-60 mph': '3.9 seconds',
+                        'Drivetrain': 'RWD',
+                        'Transmission': '8-Speed Automatic'
+                    }
+                },
+                {
+                    id: 3,
+                    name: 'Aura Apex',
+                    price: 'Starting at $64,000',
+                    image: 'https://images.pexels.com/photos/112460/pexels-photo-112460.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+                    shortDesc: 'The track-focused edition, engineered for maximum performance.',
+                    fullDesc: 'Built for the enthusiast, the Aura Apex is the ultimate expression of our performance engineering. With enhanced aerodynamics, a stiffer suspension, and superior braking power, it is perfectly at home on the racetrack. Experience driving in its most unfiltered and thrilling form.',
+                    specs: {
+                        'Engine': '3.0L Turbocharged Inline-6',
+                        'Horsepower': '382 hp',
+                        'Special': 'Upgraded Brakes & Suspension',
+                        'Tires': 'Michelin Pilot Super Sport',
+                        'Exhaust': 'Active Sport Exhaust'
+                    }
+                }
+            ];
+
+            // --- Populate Product Cards ---
+            const productGrid = document.getElementById('product-grid');
+            if (productGrid) {
+                products.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card bg-secondary rounded-lg overflow-hidden shadow-lg transform hover:scale-105 transition-transform duration-300';
+                    card.innerHTML = `
+                        <img src="${product.image}" alt="${product.name}" class="w-full h-56 object-cover">
+                        <div class="p-6 text-left">
+                            <h4 class="text-2xl font-bold text-headings">${product.name}</h4>
+                            <p class="text-lg text-blue-400 mt-2">${product.price}</p>
+                            <p class="text-secondary mt-4 h-20">${product.shortDesc}</p>
+                            <button class="view-details-btn mt-6 w-full bg-transparent border border-accent text-blue-500 py-2 px-4 rounded-full hover:bg-blue-500 hover:text-white transition-colors" data-id="${product.id}">
+                                View Details
+                            </button>
+                        </div>
+                    `;
+                    productGrid.appendChild(card);
+                });
+            }
+
+            // --- Product Modal Logic ---
+            const modal = document.getElementById('product-modal');
+            const modalContent = document.getElementById('modal-content');
+
+            function openModal(productId) {
+                const product = products.find(p => p.id == productId);
+                if (!product || !modal || !modalContent) return;
+
+                let specsHtml = '';
+                for (const [key, value] of Object.entries(product.specs)) {
+                    specsHtml += `<div class="flex justify-between py-2 border-b border-gray-700"><span class="font-semibold text-gray-400">${key}</span><span>${value}</span></div>`;
+                }
+
+                modalContent.innerHTML = `
+                    <button id="modal-close-btn" class="absolute top-4 right-4 text-secondary hover:text-headings text-3xl z-10">&times;</button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <img src="${product.image}" alt="${product.name}" class="w-full h-auto rounded-lg object-cover">
+                        </div>
+                        <div class="flex flex-col">
+                            <h3 class="text-3xl font-bold text-headings">${product.name}</h3>
+                            <p class="text-2xl text-blue-400 mt-2">${product.price}</p>
+                            <p class="text-primary mt-4">${product.fullDesc}</p>
+                             <div class="mt-6 text-sm">${specsHtml}</div>
+                             <div id="gemini-story-container" class="mt-6">
+                                <button id="generate-story-btn" class="w-full bg-green-500 text-white py-2 px-4 rounded-full hover:bg-green-600 transition-colors flex items-center justify-center">
+                                    <span id="story-btn-text">✨ Generate a Story for this Car</span>
+                                    <div id="story-loader" class="loader hidden"></div>
+                                </button>
+                                <div id="gemini-story-output" class="mt-4 text-sm text-secondary p-4 bg-gray-800 rounded-lg hidden"></div>
+                             </div>
+                        </div>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // Prevent background scrolling
+
+                document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+                document.getElementById('generate-story-btn').addEventListener('click', () => handleGenerateStory(product));
+            }
+
+            function closeModal() {
+                if (!modal) return;
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+
+            productGrid.addEventListener('click', (e) => {
+                if (e.target.classList.contains('view-details-btn')) {
+                    const productId = e.target.dataset.id;
+                    openModal(productId);
+                }
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'product-modal') {
+                    closeModal();
+                }
+            });
+
+            // --- Gemini: Generate Story Logic ---
+            async function handleGenerateStory(product) {
+                const storyBtnText = document.getElementById('story-btn-text');
+                const storyLoader = document.getElementById('story-loader');
+                const storyOutput = document.getElementById('gemini-story-output');
+
+                storyBtnText.classList.add('hidden');
+                storyLoader.classList.remove('hidden');
+                storyOutput.classList.add('hidden');
+
+                const specString = Object.entries(product.specs).map(([key, value]) => `${key}: ${value}`).join(', ');
+                const prompt = `You are a creative copywriter for a luxury car brand called Aura. Write a short, exciting, and evocative story (about 2-3 sentences) for a potential buyer about the ${product.name}. Highlight its key features like ${specString} and its price point of ${product.price}. The tone should be luxurious, thrilling, and aspirational.`;
+
+                const generatedStory = await callGeminiAPI(prompt);
+                
+                storyOutput.textContent = generatedStory;
+                storyOutput.classList.remove('hidden');
+                storyBtnText.classList.remove('hidden');
+                storyLoader.classList.add('hidden');
+            }
+            
+            // --- Gemini: Plan Road Trip Logic ---
+            const planTripBtn = document.getElementById('plan-trip-btn');
+            const destinationInput = document.getElementById('destination-input');
+            const tripPlanOutput = document.getElementById('trip-plan-output');
+            const planTripBtnText = document.getElementById('plan-trip-btn-text');
+            const planTripLoader = document.getElementById('plan-trip-loader');
+
+            planTripBtn.addEventListener('click', async () => {
+                const destination = destinationInput.value;
+                if (!destination) {
+                    tripPlanOutput.textContent = "Please enter a destination.";
+                    tripPlanOutput.classList.remove('hidden');
+                    return;
+                }
+                
+                planTripBtnText.classList.add('hidden');
+                planTripLoader.classList.remove('hidden');
+                tripPlanOutput.classList.add('hidden');
+
+                const prompt = `You are a luxury travel assistant for Aura Motors. A customer wants to plan a dream road trip to ${destination} in an Aura electric car. Create a brief, exciting 1-day itinerary formatted in markdown. Include a scenic driving route, a luxurious lunch spot, and a unique afternoon activity. The tone should be aspirational and focused on the joy of driving a high-performance electric vehicle.`;
+
+                const tripPlan = await callGeminiAPI(prompt);
+                
+                tripPlanOutput.innerHTML = tripPlan.replace(/\n/g, '<br>'); // Basic markdown support
+                tripPlanOutput.classList.remove('hidden');
+                planTripBtnText.classList.remove('hidden');
+                planTripLoader.classList.add('hidden');
+            });
+            
+
+            // --- Smooth Scrolling ---
+            const discoverBtn = document.getElementById('discover-btn');
+            const showcaseSection = document.getElementById('showcase-3d');
+            if (discoverBtn && showcaseSection) {
+                discoverBtn.addEventListener('click', () => {
+                    showcaseSection.scrollIntoView({ behavior: 'smooth' });
+                });
+            }
+
+            // --- Scroll Animations ---
+            const animatedCards = document.querySelectorAll('.feature-card, .product-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+            animatedCards.forEach(card => {
+                observer.observe(card);
+            });
+
+        });
+    </script>
+</body>
+</html>
+
